@@ -1,0 +1,11 @@
+*~
+*.*.swp
+*.pyc
+.DS_Store
+.coverage
+coverage.xml
+.tox/
+/build/
+/dist/
+/*.egg-info/
+*.egg
