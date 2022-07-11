@@ -1,53 +1,79 @@
 #!/usr/bin/env python3
 """Upload files to a Galaxy instance."""
 import os
+import sys
 import traceback
 
 import click
-from rich import progress
+import rich.console
+import rich.progress
+from click_option_group import optgroup, RequiredMutuallyExclusiveOptionGroup
 from tusclient.fingerprint import fingerprint
 
 from bioblend import ConnectionError
 from bioblend.galaxy import GalaxyInstance
 
-from .history import get_histories
+from .history import get_histories, make_table
 
 
 def make_bar(filename, total=None):
     columns = (
-        progress.TextColumn("[progress.description]{task.description}"),
-        progress.BarColumn(),
-        progress.DownloadColumn(),
-        progress.TransferSpeedColumn(),
-        progress.TextColumn("eta"),
-        progress.TimeRemainingColumn(),
+        rich.progress.TextColumn("[progress.description]{task.description}"),
+        rich.progress.BarColumn(),
+        rich.progress.DownloadColumn(),
+        rich.progress.TransferSpeedColumn(),
+        rich.progress.TextColumn("eta"),
+        rich.progress.TimeRemainingColumn(),
     )
 
-    bar = progress.Progress(*columns)
+    bar = rich.progress.Progress(*columns)
     task_id = bar.add_task(filename, total=total)
     return (bar, task_id)
 
 
+def find_history(gi, history_name, ignore_case):
+    histories = get_histories(gi, ignore_case=ignore_case, name=history_name)
+    if not histories:
+        message = f"ERROR: No histories matching {history_name} found!"
+        click.echo(click.style(message, bold=True, fg="red"), err=True)
+        sys.exit(1)
+    elif len(histories) > 1:
+        table = make_table(quiet=False, histories=histories)
+        console = rich.console.Console()
+        console.print(table)
+        message = f"ERROR: Multiple histories matching {history_name} found! Use --history-id to select one."
+        click.echo(click.style(message, bold=True, fg="red"), err=True)
+        sys.exit(1)
+    return histories[0]
+
+
 @click.command()
-@click.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
-@click.option("--api-key", envvar="GALAXY_API_KEY", required=True, help="API key for Galaxy instance")
-@click.option("--history-id", type=str, required=True, help="Target History ID")
-# TODO: make a mutually exclusive option --history-name that uses get_histories and automatically determines the history
-# ID if there is only one match
-@click.option("--file-type", default="auto", type=str, help="Galaxy file type to use")
-@click.option("--dbkey", default="?", type=str, help="Genome Build for dataset")
-@click.option("--space-to-tab/--no-space-to-tab", default=False, help="Convert spaces to tabs")
-@click.option("--auto-decompress/--no-auto-decompress", default=True, help="Automatically decompress after upload")
-@click.option("--filename", type=str, help="Filename to use in Galaxy history, if different from path")
-@click.option("--storage", type=click.Path(), required=False, help="Store URLs to resume here")
-@click.option("--silent/--no-silent", default=False, help="No output while uploading")
-@click.option("--debug/--no-debug", default=False, help="Debug output")
+@optgroup.group("History Selection Options", cls=RequiredMutuallyExclusiveOptionGroup)
+@optgroup.option("--history-id", type=str, help="Target history ID")
+@optgroup.option("--history-name", type=str, help="Target history name")
+@optgroup.group("History Options")
+@optgroup.option("--ignore-case", "-i", is_flag=True, help="Ignore case when matching history names")
+@optgroup.group("Galaxy Server Options")
+@optgroup.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
+@optgroup.option("--api-key", envvar="GALAXY_API_KEY", required=True, help="API key for Galaxy instance")
+@optgroup.group("Upload Options")
+@optgroup.option("--file-type", default="auto", type=str, help="Galaxy file type to use")
+@optgroup.option("--dbkey", default="?", type=str, help="Genome Build for dataset")
+@optgroup.option("--space-to-tab/--no-space-to-tab", default=False, help="Convert spaces to tabs")
+@optgroup.option("--auto-decompress/--no-auto-decompress", default=True, help="Automatically decompress after upload")
+@optgroup.option("--filename", type=str, help="Filename to use in Galaxy history, if different from path")
+@optgroup.group("General Options")
+@optgroup.option("--storage", type=click.Path(), required=False, help="Store URLs to resume here")
+@optgroup.option("--silent", is_flag=True, default=False, help="No output while uploading")
+@optgroup.option("--debug", is_flag=True, default=False, help="Debug output")
 @click.argument("path", type=click.Path())
 def upload_file(
     url,
     path,
     api_key,
-    history_id,
+    history_id=None,
+    history_name=None,
+    ignore_case=False,
     file_type="auto",
     dbkey="?",
     space_to_tab=False,
@@ -57,6 +83,8 @@ def upload_file(
     silent=False,
     debug=False,
 ):
+    filename = filename or os.path.basename(path)
+
     gi = GalaxyInstance(url, api_key)
 
     upload_kwargs = {
@@ -66,6 +94,12 @@ def upload_file(
         "space_to_tab": space_to_tab,
         "auto_decompress": auto_decompress,
     }
+
+    if not history_id:
+        history = find_history(gi, history_name, ignore_case)
+        history_id = history["id"]
+        if debug:
+            click.echo(f"History name search '{history_name}' resolved to history {history_id}: {history['name']}")
 
     try:
         if silent:
@@ -82,7 +116,7 @@ def upload_file(
             storage=storage,
         )
         # TODO: this is uploader.get_file_size() in tusclient 1.0.0
-        bar, task_id = make_bar(filename or os.path.basename(path), total=uploader.file_size)
+        bar, task_id = make_bar(filename, total=uploader.file_size)
 
         with bar:
             last_offset = 0

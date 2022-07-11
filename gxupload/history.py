@@ -10,7 +10,8 @@ import rich.table
 from bioblend.galaxy import GalaxyInstance
 
 
-def make_table(quiet):
+def make_table(quiet, histories=None):
+    histories = histories or []
     if quiet:
         table = rich.table.Table(show_header=False, show_edge=False)
         table.add_column("ID", no_wrap=True)
@@ -19,6 +20,20 @@ def make_table(quiet):
         table.add_column("ID", style="cyan", no_wrap=True)
         table.add_column("Name", style="magenta")
         table.add_column("Last Modified", style="green")
+    for history in histories:
+        if quiet:
+            row = (history["id"],)
+        else:
+            name = history["name"]
+            update_time = datetime.datetime.fromisoformat(history["update_time"]).strftime("%c")
+            row = (
+                history["id"],
+                name,
+                update_time,
+            )
+        # only add the columns appropriate for the number of columns in the table
+        #table.add_row(*(row[:len(table.columns)]))
+        table.add_row(*row)
     return table
 
 
@@ -31,8 +46,8 @@ def get_histories(gi, ignore_case=False, name=None):
 
     # the "name" option to get_histories() only does exact matching, so we filter results ourselves
     histories = []
-    for history in gi.histories.get_histories()
-        if not name or name_re.search(name):
+    for history in gi.histories.get_histories():
+        if not name or name_re.search(history["name"]):
             histories.append(history)
 
     return histories
@@ -52,17 +67,9 @@ def main(
     name,
 ):
     gi = GalaxyInstance(url, api_key)
-    table = make_table(quiet)
-    for history in get_histories(gi, ignore_case, name):
-        name = history["name"]
-        update_time = datetime.datetime.fromisoformat(history["update_time"]).strftime("%c")
-        row = (
-            history['id'],
-            name,
-            update_time,
-        )
-        # only add the columns appropriate for the number of columns in the table
-        table.add_row(*(row[:len(table.columns)]))
+    histories = get_histories(gi, ignore_case, name)
+    table = make_table(quiet, histories=histories)
+    #for history in get_histories(gi, ignore_case, name):
 
     console = rich.console.Console()
     console.print(table)
