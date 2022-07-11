@@ -16,7 +16,7 @@ from bioblend.galaxy import GalaxyInstance
 from .history import get_histories, make_table
 
 
-def make_bar(filename, total=None):
+def make_bar(file_name, total=None):
     columns = (
         rich.progress.TextColumn("[progress.description]{task.description}"),
         rich.progress.BarColumn(),
@@ -27,7 +27,7 @@ def make_bar(filename, total=None):
     )
 
     bar = rich.progress.Progress(*columns)
-    task_id = bar.add_task(filename, total=total)
+    task_id = bar.add_task(file_name, total=total)
     return (bar, task_id)
 
 
@@ -47,26 +47,6 @@ def find_history(gi, history_name, ignore_case):
     return histories[0]
 
 
-@click.command()
-@optgroup.group("History Selection Options", cls=RequiredMutuallyExclusiveOptionGroup)
-@optgroup.option("--history-id", type=str, help="Target history ID")
-@optgroup.option("--history-name", type=str, help="Target history name")
-@optgroup.group("History Options")
-@optgroup.option("--ignore-case", "-i", is_flag=True, help="Ignore case when matching history names")
-@optgroup.group("Galaxy Server Options")
-@optgroup.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
-@optgroup.option("--api-key", envvar="GALAXY_API_KEY", required=True, help="API key for Galaxy instance")
-@optgroup.group("Upload Options")
-@optgroup.option("--file-type", default="auto", type=str, help="Galaxy file type to use")
-@optgroup.option("--dbkey", default="?", type=str, help="Genome Build for dataset")
-@optgroup.option("--space-to-tab/--no-space-to-tab", default=False, help="Convert spaces to tabs")
-@optgroup.option("--auto-decompress/--no-auto-decompress", default=True, help="Automatically decompress after upload")
-@optgroup.option("--filename", type=str, help="Filename to use in Galaxy history, if different from path")
-@optgroup.group("General Options")
-@optgroup.option("--storage", type=click.Path(), required=False, help="Store URLs to resume here")
-@optgroup.option("--silent", is_flag=True, default=False, help="No output while uploading")
-@optgroup.option("--debug", is_flag=True, default=False, help="Debug output")
-@click.argument("path", type=click.Path())
 def upload_file(
     url,
     path,
@@ -78,19 +58,19 @@ def upload_file(
     dbkey="?",
     space_to_tab=False,
     auto_decompress=False,
-    filename=None,
+    file_name=None,
     storage=None,
     silent=False,
     debug=False,
 ):
-    filename = filename or os.path.basename(path)
+    file_name = file_name or os.path.basename(path)
 
     gi = GalaxyInstance(url, api_key)
 
     upload_kwargs = {
         "file_type": file_type,
         "dbkey": dbkey,
-        "file_name": filename,
+        "file_name": file_name,
         "space_to_tab": space_to_tab,
         "auto_decompress": auto_decompress,
     }
@@ -116,7 +96,7 @@ def upload_file(
             storage=storage,
         )
         # TODO: this is uploader.get_file_size() in tusclient 1.0.0
-        bar, task_id = make_bar(filename, total=uploader.file_size)
+        bar, task_id = make_bar(file_name, total=uploader.file_size)
 
         with bar:
             last_offset = 0
@@ -144,5 +124,38 @@ def upload_file(
         click.echo(click.style(message, bold=True, fg="red"), err=True)
 
 
+@click.command()
+@optgroup.group("History Selection Options", cls=RequiredMutuallyExclusiveOptionGroup)
+@optgroup.option("--history-id", type=str, help="Target history ID")
+@optgroup.option("--history-name", type=str, help="Target history name")
+@optgroup.group("History Options")
+@optgroup.option("--ignore-case", "-i", is_flag=True, help="Ignore case when matching history names")
+@optgroup.group("Galaxy Server Options")
+@optgroup.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
+@optgroup.option("--api-key", envvar="GALAXY_API_KEY", required=True, help="API key for Galaxy instance")
+@optgroup.group("Upload Options")
+@optgroup.option("--file-type", default="auto", type=str, help="Galaxy file type to use")
+@optgroup.option("--dbkey", default="?", type=str, help="Genome Build for dataset")
+@optgroup.option("--space-to-tab/--no-space-to-tab", default=False, help="Convert spaces to tabs")
+@optgroup.option("--auto-decompress/--no-auto-decompress", default=True, help="Automatically decompress after upload")
+@optgroup.option("--file-name", type=str, help="Filename to use in Galaxy history, if different from path")
+@optgroup.group("General Options")
+@optgroup.option("--storage", type=click.Path(), required=False, help="Store URLs to resume here")
+@optgroup.option("--silent", is_flag=True, default=False, help="No output while uploading")
+@optgroup.option("--debug", is_flag=True, default=False, help="Debug output")
+@click.argument("path", type=click.Path(), nargs=-1)
+def main(url, path, api_key, **kwargs):
+    paths = path
+    if not paths:
+        message = "WARNING: No paths to upload specified (see --help)"
+        click.echo(click.style(message, bold=True, fg="yellow"), err=True)
+    elif len(paths) > 1 and kwargs["file_name"]:
+        message = f"ERROR: --file-name option cannot be used with multiple paths"
+        click.echo(click.style(message, bold=True, fg="red"), err=True)
+        sys.exit(1)
+    for path in paths:
+        upload_file(url, path, api_key, **kwargs)
+
+
 if __name__ == "__main__":
-    upload_file()
+    main()
