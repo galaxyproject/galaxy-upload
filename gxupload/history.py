@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Upload files to a Galaxy instance."""
 import datetime
-import os
 import re
 
 import click
@@ -12,6 +11,7 @@ from bioblend.galaxy import GalaxyInstance
 
 def make_table(quiet, histories=None):
     histories = histories or []
+    # table setup
     if quiet:
         table = rich.table.Table(show_header=False, show_edge=False)
         table.add_column("ID", no_wrap=True)
@@ -20,19 +20,20 @@ def make_table(quiet, histories=None):
         table.add_column("ID", style="cyan", no_wrap=True)
         table.add_column("Name", style="magenta")
         table.add_column("Last Modified", style="green")
+    # add rows
     for history in histories:
         if quiet:
             row = (history["id"],)
         else:
             name = history["name"]
-            update_time = datetime.datetime.fromisoformat(history["update_time"]).strftime("%c")
+            update_time = datetime.datetime.fromisoformat(
+                history["update_time"]
+            ).strftime("%c")
             row = (
                 history["id"],
                 name,
                 update_time,
             )
-        # only add the columns appropriate for the number of columns in the table
-        #table.add_row(*(row[:len(table.columns)]))
         table.add_row(*row)
     return table
 
@@ -55,9 +56,16 @@ def get_histories(gi, ignore_case=False, name=None):
 
 @click.command()
 @click.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
-@click.option("--api-key", envvar="GALAXY_API_KEY", required=True, help="API key for Galaxy instance")
+@click.option(
+    "--api-key",
+    envvar="GALAXY_API_KEY",
+    required=True,
+    help="API key for Galaxy instance",
+)
 @click.option("--quiet", "-q", is_flag=True, help="Only output history IDs")
-@click.option("--ignore-case", "-i", is_flag=True, help="Ignore case when matching history names")
+@click.option(
+    "--ignore-case", "-i", is_flag=True, help="Ignore case when matching history names"
+)
 @click.argument("name", required=False)
 def main(
     url,
@@ -69,8 +77,6 @@ def main(
     gi = GalaxyInstance(url, api_key)
     histories = get_histories(gi, ignore_case, name)
     table = make_table(quiet, histories=histories)
-    #for history in get_histories(gi, ignore_case, name):
-
     console = rich.console.Console()
     console.print(table)
 
