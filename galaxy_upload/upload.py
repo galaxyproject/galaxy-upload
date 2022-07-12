@@ -135,7 +135,10 @@ def upload_file(
 )
 @optgroup.group("Galaxy Server Options")
 @optgroup.option(
-    "--url", default="http://localhost:8080", help="URL of Galaxy instance"
+    "--url",
+    envvar="GALAXY_URL",
+    default="http://localhost:8080",
+    help="URL of Galaxy instance",
 )
 @optgroup.option(
     "--api-key",

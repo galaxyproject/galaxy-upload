@@ -55,7 +55,12 @@ def get_histories(gi, ignore_case=False, name=None):
 
 
 @click.command()
-@click.option("--url", default="http://localhost:8080", help="URL of Galaxy instance")
+@click.option(
+    "--url",
+    envvar="GALAXY_URL",
+    default="http://localhost:8080",
+    help="URL of Galaxy instance",
+)
 @click.option(
     "--api-key",
     envvar="GALAXY_API_KEY",
