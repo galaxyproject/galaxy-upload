@@ -9,3 +9,4 @@ coverage.xml
 /dist/
 /*.egg-info/
 *.egg
+docs/_build
