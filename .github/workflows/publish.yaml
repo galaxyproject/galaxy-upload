@@ -18,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip setuptools
-        python3 -m pip install --upgrade twine wheel
+        python3 -m pip install --upgrade twine wheel build
     - name: Create and check packages
       run: |
         python3 -m build
