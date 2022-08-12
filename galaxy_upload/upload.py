@@ -96,12 +96,12 @@ def upload_file(
             path,
             storage=storage,
         )
-        # TODO: this is uploader.get_file_size() in tusclient 1.0.0
-        bar, task_id = make_bar(file_name, total=uploader.file_size)
+        file_size = uploader.get_file_size()
+        bar, task_id = make_bar(file_name, total=file_size)
 
         with bar:
             last_offset = 0
-            while uploader.offset < uploader.file_size:
+            while uploader.offset < file_size:
                 uploader.upload_chunk()
                 bar.update(task_id, advance=(uploader.offset - last_offset))
                 last_offset = uploader.offset
