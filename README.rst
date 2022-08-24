@@ -8,6 +8,9 @@ which include support for resumable uploads with the `tus`_ protocol.
 Installation
 ============
 
+Using pip
+---------
+
 Python 3.7 or later is required.
 
 To install::
@@ -23,6 +26,46 @@ with Python's built-in `venv`_ module::
     $ python3 -m venv ~/galaxy-upload
     $ . ~/galaxy-upload/bin/activate
     $ pip install galaxy-upload
+
+Using Conda
+-----------
+
+Alternatively, galaxy-upload can be installed using the `Conda`_ package manager. The `galaxy-upload Conda package`_ can
+be found on the `bioconda`_ channel and installed like so::
+
+    $ conda create -n galaxy-upload -c bioconda -c conda-forge galaxy-upload
+    $ conda activate galaxy-upload
+
+Using Containers
+----------------
+
+It is also possible to run galaxy-upload in either a `Docker`_ or `Singularity`_/`Apptainer`_ container. The
+`galaxy-upload BioContainer`_ is automatically built and maintained by the `BioContainers`_ project.
+
+To use the Docker container::
+
+    $ docker run -it --rm -v "$(pwd):$(pwd)" -w "$(pwd)" -u "$(id -u):$(id -g)" \
+        quay.io/biocontainers/galaxy-upload:1.0.0--pyhdfd78af_0 /bin/bash
+
+Or as a single command without entering an interactive shell::
+
+    $ docker run --rm -v "$(pwd):$(pwd)" -w "$(pwd)" -u "$(id -u):$(id -g)" \
+        quay.io/biocontainers/galaxy-upload:1.0.0--pyhdfd78af_0 galaxy-upload
+
+Adjust the values of ``-v`` and ``-w`` according to where the data you want to upload are located. In the example above,
+it is assumed they are in the current working directory.
+
+To use the Singularity container::
+
+    $ singularity run https://depot.galaxyproject.org/singularity/galaxy-upload:1.0.0--pyhdfd78af_0
+
+Or as a single command without entering an interactive shell::
+
+    $ singularity run https://depot.galaxyproject.org/singularity/galaxy-upload:1.0.0--pyhdfd78af_0 galaxy-upload
+
+Additional (newer) versions of the container may be available, BioContainers does not use the ``latest`` tag, but you
+can find all tags (which are valid for the Singularity images hosted on depot.galaxyproject.org as well as the Docker
+images) at the `galaxy-upload quay.io page`_
 
 Usage
 =====
@@ -103,3 +146,12 @@ to remove it from the storage file or use a different storage file.
 .. _Galaxy: http://galaxyproject.org/
 .. _tus: https://tus.io/
 .. _venv: https://docs.python.org/3/library/venv.html
+.. _Conda: https://docs.conda.io/
+.. _galaxy-upload Conda package: https://anaconda.org/bioconda/galaxy-upload
+.. _bioconda: https://bioconda.github.io/
+.. _Docker: https://www.docker.com/
+.. _Singularity: https://sylabs.io/docs/
+.. _Apptainer: https://apptainer.org/
+.. _galaxy-upload BioContainer: https://biocontainers.pro/tools/galaxy-upload
+.. _BioContainers: https://biocontainers.pro/
+.. _galaxy-upload quay.io page: https://quay.io/repository/biocontainers/galaxy-upload
