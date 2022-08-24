@@ -33,7 +33,7 @@ Using Conda
 Alternatively, galaxy-upload can be installed using the `Conda`_ package manager. The `galaxy-upload Conda package`_ can
 be found on the `bioconda`_ channel and installed like so::
 
-    $ conda create -n galaxy-upload -c bioconda -c conda-forge galaxy-upload
+    $ conda create -n galaxy-upload -c conda-forge -c bioconda galaxy-upload
     $ conda activate galaxy-upload
 
 Using Containers
