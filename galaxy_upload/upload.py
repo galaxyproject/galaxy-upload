@@ -172,7 +172,7 @@ def upload_file(
     "--silent", is_flag=True, default=False, help="No output while uploading"
 )
 @optgroup.option("--debug", is_flag=True, default=False, help="Debug output")
-@click.argument("path", type=click.Path(), nargs=-1)
+@click.argument("path", type=click.Path(exists=True, dir_okay=False), nargs=-1)
 def main(url, path, api_key, **kwargs):
     paths = path
     if not paths:
